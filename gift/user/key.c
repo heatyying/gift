@@ -72,12 +72,12 @@ void KeyScan(void)                    //键扫描
         if (key_temp == key_bak)
             {
             key_old++;
-          //  if (key_old==KEYDELAY)                //连续键,不要则把此if屏蔽
-             //   {
-               // key_ok=1;
-              //  key_data=fnKeycode(key_temp);    //键*
-               // key_old=KEYDELAY-KEYLOOP;
-          //  }
+			if (key_old==KEYDELAY)                //连续键,不要则把此if屏蔽
+			{
+				key_ok=1;
+				key_data=fnKeycode(key_temp);    //键*
+				key_old=KEYDELAY-KEYLOOP;
+			}
         }
         else
             {
