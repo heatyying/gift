@@ -27,6 +27,7 @@
 #define GLOBALS 
 
 #include "vs1003.h"	 
+#include "key.h"
 #include "sdio_sdcard.h"
 #include "ff.h"
 #include "ffconf.h"
@@ -192,6 +193,24 @@ FRESULT f_close (
 
 -------------------------------------------------------------------------------
 */ 
+
+void ScanKey(void)
+{
+
+}
+
+
+void KeyToVol(void)
+{
+
+}
+
+
+void GetVolFromKey(void)
+{
+	ScanKey();
+	KeyToVol();
+}
 
 /****************************************************************************
 * Ãû    ³Æ£ºvoid Play_Music(void)
