@@ -208,6 +208,12 @@ void Play_Music(void)
   unsigned int count=0;
   char path[50]={""},j=0;  
   char *result1,*result2,*result3,*result4; 
+  unsigned int volcnt=0;
+
+  unsigned char vol=0;
+  unsigned int volcntmax=10000;
+  unsigned int voldest=0;
+  
 
   /*开启长文件名功能时， 要预先初始化文件名缓冲区的长度 */
   #if _USE_LFN
@@ -262,7 +268,25 @@ void Play_Music(void)
 							{
 								VS1003_WriteByte(buffer[count]); //写入音频数据								
 								count++;
-							} 						
+							}
+
+							if (volcnt ==0 )
+								{voldest = 1;}
+
+							if (volcnt == volcntmax)
+								{voldest = 0;}
+							if (voldest ==1)
+							{volcnt++;}
+							if (voldest == 0)
+								{volcnt--;}
+							vol =(unsigned char)(volcnt/500);
+
+							if (volcnt % 1== 0)
+							{ 
+								VS1003_SetVol(vol); 
+							}
+
+							
 						}
     	    			if (res || br == 0) break;   // 是否到文件尾
 					}
@@ -298,23 +322,27 @@ void Play_Music(void)
 ****************************************************************************/
 int main(void)
 {
-  RCC_Configuration();	             //设置内部时钟及外设时钟使能
-  if (SysTick_Config(720))		     //时钟节拍中断时10us一次  用于定时 
-  { 
-    /* Capture error */ 
-    while (1);
-  }     
-  NVIC_Configuration();			     //中断源配置  
-         					//xRST =1   
+	RCC_Configuration();	             //设置内部时钟及外设时钟使能
+	if (SysTick_Config(720))		     //时钟节拍中断时10us一次  用于定时 
+	{ 
+	/* Capture error */ 
+	while (1);
+	}     
+	NVIC_Configuration();			     //中断源配置  
+	     					//xRST =1   
+
+	Usart1_Init();		             //串口1初始化
+	SPI_VS1003_Init();				 //VS1003 初始化    
+
+
+	Delay_us(10000);					 //延时100ms
+	SD_TEST();                         //SD卡测试函数
+
+	while (1)
+	{
+		Play_Music();						 //播放音频
+	}
   
-  Usart1_Init();		             //串口1初始化
-  SPI_VS1003_Init();				 //VS1003 初始化    
-  
- 
-  Delay_us(10000);					 //延时100ms
-  SD_TEST();                         //SD卡测试函数
-  Play_Music();						 //播放音频
-  while (1);
 }
 /****************************************************************************
 * 名    称：void Usart1_Init(void)

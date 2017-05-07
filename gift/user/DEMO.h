@@ -29,6 +29,8 @@ EXT unsigned char VS1003_ReadByte(void);
 EXT unsigned char VS1003_WriteByte(u8 byte);
 EXT void VS1003_start(void);
 EXT void SPI_VS1003_Init(void);
+EXT void VS1003_SetVol(unsigned char vol);
+
 
 #define Led_ON()   GPIO_SetBits(GPIOB, GPIO_Pin_5);  	      //LED1ÁÁ
 #define Led_OFF()  GPIO_ResetBits(GPIOB, GPIO_Pin_5); 	      //LED2Ãð

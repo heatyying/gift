@@ -157,6 +157,34 @@ unsigned int VS1003_ReadReg(unsigned char add)
 	return resultvalue;                 	//返回16位寄存器的值
 }
 
+
+
+/****************************************************************************
+* 名    称：void VS1003_SetVol(unsigned char highbyte, unsigned char lowbyte)
+* 功    能：设置1003音量
+* 入口参数：无
+* 出口参数：无
+* 说    明：
+* 调用方法：无 
+****************************************************************************/
+void VS1003_SetVol(unsigned char vol)
+{
+	unsigned char highbyte=vol;
+	unsigned char lowbyte=vol;
+	XDCS_SET(1);                    			//xDCS = 1
+	CS_SET(0);                      			//xCS = 0
+	VS1003_WriteByte(VS_WRITE_COMMAND); 		//发送写寄存器命令
+	VS1003_WriteByte(0x0b);      				//发送寄存器的地址
+	VS1003_WriteByte(highbyte);         		//发送待写数据的高8位
+	VS1003_WriteByte(lowbyte);          		//发送待写数据的低8位
+	CS_SET(1);       							//xCS = 1
+	XDCS_SET(0);                    			//xDCS = 0
+}
+
+
+
+
+
 /****************************************************************************
 * 名    称：void VS1003_start(void)
 * 功    能：VS1003的初始设置
