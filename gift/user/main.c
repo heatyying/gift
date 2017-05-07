@@ -279,7 +279,7 @@ void Play_Music(void)
 							{volcnt++;}
 							if (voldest == 0)
 								{volcnt--;}
-							vol =(unsigned char)(volcnt/500);
+							vol =(unsigned char)(volcnt/200);
 
 							if (volcnt % 1== 0)
 							{ 
