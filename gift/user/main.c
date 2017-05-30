@@ -46,16 +46,31 @@ SD_Error Status = SD_OK;
 void RCC_Configuration(void);
 void NVIC_Configuration(void);
 void USART_OUT(USART_TypeDef* USARTx, uint8_t *Data,...);
-void Usart1_Init(void);	;
+void Usart1_Init(void);	
 void Delay_us(__IO uint32_t nTime);
 void TimingDelay_Decrement(void);
+void GPIO_Configuration(void);
+void KeyInit(KeyPressedType *key , 	GPIO_TypeDef * inkeyGPIO, uint16_t inkeyGPIOPin ,	unsigned char inthreshold);
+void ScanKey(KeyPressedType *key);
+unsigned char KeyToVol(void);
 
-		
+
+
+
+
+
+
+
 FATFS fs;                      // 逻辑驱动器的标志
 FIL fsrc, fdst;                // 文件标志 
 unsigned char buffer[512];     // 文件内容缓冲区
 FRESULT res;                   // FatFs 功能函数返回结果变量
 unsigned int br, bw;           // 文件读/写计数器
+unsigned char volUpPressed = 0;
+unsigned char volDownPressed = 0;
+unsigned char vol = 100;
+unsigned char voltemp = 100;
+
 
 
 /****************************************************************************
@@ -194,23 +209,59 @@ FRESULT f_close (
 -------------------------------------------------------------------------------
 */ 
 
-void ScanKey(void)
+void KeyInit(KeyPressedType *key , 	GPIO_TypeDef * inkeyGPIO, uint16_t inkeyGPIOPin ,	unsigned char inthreshold)
 {
+	key->isPressed = 0;
+	key->keyGPIO = inkeyGPIO;
+	key->keyGPIOPin = inkeyGPIOPin;
+	key->pressedcnt = 0;
+	key->threshold = inthreshold;
+	return;
+}
+
+void ScanKey(KeyPressedType *key)
+{
+	if(GPIO_ReadInputDataBit(key->keyGPIO,key->keyGPIOPin)==0)
+	{ 		 									 	 
+		key->pressedcnt ++;
+	}
+	else
+	{
+		key->pressedcnt = 0;
+		key->isPressed = 0;
+	}
+	
+	if(key->pressedcnt == key->threshold)
+	{
+		key->isPressed = 1;
+	}
+	else
+	{
+		key->isPressed = 0;
+	}
 
 }
 
 
-void KeyToVol(void)
+unsigned char KeyToVol(void)
 {
+	if (volUpPressed)
+		{
+			vol += 10;
+		}
+	if (volDownPressed)
+		{
+			vol -= 10;
+		}
+	vol = (vol > 254)? 254: vol;
+	vol = (vol < 10)? 10: vol;
+
+	return vol;
 
 }
 
 
-void GetVolFromKey(void)
-{
-	ScanKey();
-	KeyToVol();
-}
+
 
 /****************************************************************************
 * 名    称：void Play_Music(void)
@@ -228,11 +279,7 @@ void Play_Music(void)
   char path[50]={""},j=0;  
   char *result1,*result2,*result3,*result4; 
   unsigned int volcnt=0;
-
-  unsigned char vol=0;
-  unsigned int volcntmax=10000;
-  unsigned int voldest=0;
-  
+  KeyPressedType key1,key2;
 
   /*开启长文件名功能时， 要预先初始化文件名缓冲区的长度 */
   #if _USE_LFN
@@ -240,6 +287,10 @@ void Play_Music(void)
     finfo.lfname = lfn;
     finfo.lfsize = sizeof(lfn);
   #endif
+		
+  KeyInit(&key1, GPIOC, GPIO_Pin_5, 100);
+  KeyInit(&key2, GPIOC, GPIO_Pin_2, 100);
+
   USART_OUT(USART1,"\n文件系统(Tini-FatFS0.09a)启动成功! \n");
   
   disk_initialize(0);						     //fatfs可以管理多个介质的分区， 所以把物理存储介质SST25VF016B标示为0区，相当于磁盘编号
@@ -288,6 +339,8 @@ void Play_Music(void)
 								VS1003_WriteByte(buffer[count]); //写入音频数据								
 								count++;
 							}
+							
+/**********************************vol 调节**********************************
 
 							if (volcnt ==0 )
 								{voldest = 1;}
@@ -299,10 +352,20 @@ void Play_Music(void)
 							if (voldest == 0)
 								{volcnt--;}
 							vol =(unsigned char)(volcnt/200);
+							
+************************************end vol 调节*****************************/
 
-							if (volcnt % 1== 0)
+
+							ScanKey(&key1);
+							ScanKey(&key2);
+							volUpPressed = key1.isPressed;
+							volDownPressed = key2.isPressed;
+							vol = KeyToVol();
+
+							if (vol != voltemp)
 							{ 
-								VS1003_SetVol(vol); 
+								VS1003_SetVol(vol);
+								voltemp = vol;
 							}
 
 							
@@ -341,6 +404,8 @@ void Play_Music(void)
 ****************************************************************************/
 int main(void)
 {
+	KeyPressedType key1,key2;
+
 	RCC_Configuration();	             //设置内部时钟及外设时钟使能
 	if (SysTick_Config(720))		     //时钟节拍中断时10us一次  用于定时 
 	{ 
@@ -349,7 +414,7 @@ int main(void)
 	}     
 	NVIC_Configuration();			     //中断源配置  
 	     					//xRST =1   
-
+	GPIO_Configuration();                //GPIO初始化
 	Usart1_Init();		             //串口1初始化
 	SPI_VS1003_Init();				 //VS1003 初始化    
 
@@ -430,6 +495,37 @@ void NVIC_Configuration(void)
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
 }
+
+/****************************************************************************
+* 名    称：void GPIO_Configuration(void)
+* 功    能：LED控制口线及键盘设置
+* 入口参数：无
+* 出口参数：无
+* 说    明：
+* 调用方法：无 
+****************************************************************************/ 
+void GPIO_Configuration(void)
+{
+  GPIO_InitTypeDef GPIO_InitStructure;
+
+  
+  /* K1 配置按键中断线PC5 */
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;					    //输入上拉
+  GPIO_Init(GPIOC, &GPIO_InitStructure);
+
+  /* K2 配置按键中断线PC2 */
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;					    //输入上拉
+  GPIO_Init(GPIOC, &GPIO_InitStructure);
+  
+  /* K3 配置按键中断线PC3 */
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;					    //输入上拉
+  GPIO_Init(GPIOC, &GPIO_InitStructure);
+  
+}
+
 
 /******************************************************
 		整形数据转字符串函数
